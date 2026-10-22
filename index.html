@@ -42,11 +42,34 @@
             <div>
                 <div class="flex justify-between items-center mb-2">
                     <label for="unitSelect" class="block text-sm font-semibold text-[#1e3a5f]">選擇您的單位</label>
-                    <span id="loadingNotice" class="text-xs text-red-500 font-medium">資料同步中，請稍候</span>
+                    <!-- 預設隱藏，選擇單位時才會短暫出現，載入完成後自動消失 -->
+                    <span id="loadingNotice" class="text-xs text-red-500 font-medium" style="display: none;">資料同步中，請稍候</span>
                 </div>
                 <select id="unitSelect" required class="w-full bg-[#fcfbfa] border border-[#d8d0c1] rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all">
                     <option value="" disabled selected>請選擇單位...</option>
                 </select>
             </div>
 
-            <!-- 出席人員勾選
+            <!-- 出席人員勾選區 -->
+            <div>
+                <label class="block text-sm font-semibold text-[#1e3a5f] mb-2">出席人員</label>
+                <div id="membersContainer" class="bg-[#fcfbfa] border border-[#d8d0c1] rounded-xl p-4 min-h-[90px] flex flex-col justify-center items-center text-gray-400 text-sm">
+                    請先選擇上方單位
+                </div>
+            </div>
+
+            <!-- 提交按鈕 -->
+            <button type="submit" id="submitBtn" class="w-full mt-2 bg-[#1e3a5f] hover:bg-[#152a45] text-white font-medium py-3.5 px-4 rounded-xl shadow-md transition-all duration-200 cursor-pointer text-center text-sm tracking-wide">
+                完成簽到
+            </button>
+        </form>
+    </div>
+
+    <!-- 成功彈跳視窗 -->
+    <div id="successModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center card-shadow">
+            <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+                ✓
+            </div>
+            <h3 class="text-lg font-bold text-[#1e3a5f] mb-1">簽到成功</h3>
+            <p id="successMessage" class="text-sm text-gray-6
