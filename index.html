@@ -42,7 +42,7 @@
             <div>
                 <div class="flex justify-between items-center mb-2">
                     <label for="unitSelect" class="block text-sm font-semibold text-[#1e3a5f]">選擇您的單位</label>
-                    <!-- 預設隱藏，選擇單位時才會出現，載入完成後自動消失 -->
+                    <!-- 預設隱藏，點選下拉選單時才出現，名單跑完後自動消失 -->
                     <span id="loadingNotice" class="text-xs text-red-500 font-medium" style="display: none;">資料同步中，請稍候</span>
                 </div>
                 <select id="unitSelect" required class="w-full bg-[#fcfbfa] border border-[#d8d0c1] rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all">
@@ -85,7 +85,6 @@
     </footer>
 
     <script>
-        // ★ 請確認這裡使用的是您最新的 Google Apps Script 網頁應用程式網址
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw4aOyvVu_pPDHwhRdtc7fpwPcjA16TkOB3KIuwrRecOGibEmUJEwiPesBMm4NthUBDDQ/exec";
 
         let allData = {};
@@ -120,23 +119,27 @@
             });
         }
 
-        // 當選擇單位時觸發
-        document.getElementById('unitSelect').addEventListener('change', function() {
-            const notice = document.getElementById('loadingNotice');
+        const unitSelectElem = document.getElementById('unitSelect');
+        const noticeElem = document.getElementById('loadingNotice');
+
+        // 當使用者點擊「請選擇單位」或下拉選單時，立刻顯示紅字提示
+        unitSelectElem.addEventListener('mousedown', function() {
+            if (noticeElem) noticeElem.style.display = 'inline';
+        });
+
+        // 當真正選擇了某個單位時觸發
+        unitSelectElem.addEventListener('change', function() {
+            if (noticeElem) noticeElem.style.display = 'inline';
+
+            const selectedUnit = this.value;
             const container = document.getElementById('membersContainer');
-            
-            // 1. 立即顯示紅字提示
-            if (notice) notice.style.display = 'inline';
-            
-            // 顯示讀取中的狀態
-            container.innerHTML = '<span class="text-sm text-gray-400">載入名單中...</span>';
+            container.innerHTML = '';
             container.classList.remove('justify-center', 'items-center', 'text-gray-400');
             container.classList.add('space-y-3', 'items-start');
 
-            const selectedUnit = this.value;
             const members = allData[selectedUnit] || [];
 
-            // 2. 加入微小延遲（0.4秒），讓使用者清楚看到紅字提示，同時確保畫面渲染流暢
+            // 刻意加入微小延遲讓紅字穩定呈現，確保名單完整跑完後才消失
             setTimeout(() => {
                 container.innerHTML = '';
 
@@ -160,11 +163,11 @@
                     });
                 }
 
-                // 3. 名單完整呈現後，立刻將紅字提示隱藏
-                if (notice) {
-                    notice.style.display = 'none';
+                // 🎯 名單完整跑完呈現後，紅字準時消失
+                if (noticeElem) {
+                    noticeElem.style.display = 'none';
                 }
-            }, 400); // 400毫秒的同步緩衝時間
+            }, 350);
         });
 
         // 提交表單
