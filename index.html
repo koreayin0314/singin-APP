@@ -42,7 +42,7 @@
             <div>
                 <div class="flex justify-between items-center mb-2">
                     <label for="unitSelect" class="block text-sm font-semibold text-[#1e3a5f]">選擇您的單位</label>
-                    <!-- 預設隱藏，選擇單位時才會短暫出現，載入完成後自動消失 -->
+                    <!-- 預設隱藏，選擇單位時才會出現，載入完成後自動消失 -->
                     <span id="loadingNotice" class="text-xs text-red-500 font-medium" style="display: none;">資料同步中，請稍候</span>
                 </div>
                 <select id="unitSelect" required class="w-full bg-[#fcfbfa] border border-[#d8d0c1] rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all">
@@ -123,42 +123,48 @@
         // 當選擇單位時觸發
         document.getElementById('unitSelect').addEventListener('change', function() {
             const notice = document.getElementById('loadingNotice');
-            if (notice) notice.style.display = 'inline'; // 顯示「資料同步中，請稍候」
-
-            const selectedUnit = this.value;
             const container = document.getElementById('membersContainer');
-            container.innerHTML = '';
+            
+            // 1. 立即顯示紅字提示
+            if (notice) notice.style.display = 'inline';
+            
+            // 顯示讀取中的狀態
+            container.innerHTML = '<span class="text-sm text-gray-400">載入名單中...</span>';
             container.classList.remove('justify-center', 'items-center', 'text-gray-400');
             container.classList.add('space-y-3', 'items-start');
 
+            const selectedUnit = this.value;
             const members = allData[selectedUnit] || [];
 
-            if (members.length === 0) {
-                container.innerHTML = '<span class="text-sm text-gray-400">此單位目前無設定人員</span>';
-                if (notice) notice.style.display = 'none'; // 隱藏提示
-                return;
-            }
+            // 2. 加入微小延遲（0.4秒），讓使用者清楚看到紅字提示，同時確保畫面渲染流暢
+            setTimeout(() => {
+                container.innerHTML = '';
 
-            members.forEach((member) => {
-                const isCheckedIn = checkedInNamesSet.has(member.name);
+                if (members.length === 0) {
+                    container.innerHTML = '<span class="text-sm text-gray-400">此單位目前無設定人員</span>';
+                } else {
+                    members.forEach((member) => {
+                        const isCheckedIn = checkedInNamesSet.has(member.name);
 
-                const label = document.createElement('label');
-                label.className = `flex items-center space-x-3 w-full p-1 rounded-lg transition-all ${isCheckedIn ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:bg-[#f4efe6]'}`;
-                
-                label.innerHTML = `
-                    <input type="checkbox" name="memberCheckbox" value="${member.name}" data-title="${member.title}" ${isCheckedIn ? 'disabled' : ''} class="w-4 h-4 text-[#1e3a5f] rounded border-gray-300 focus:ring-[#1e3a5f]">
-                    <span class="text-sm text-gray-800 font-medium">
-                        ${member.name} <span class="text-xs text-gray-500 ml-1">(${member.title})</span>
-                        ${isCheckedIn ? '<span class="text-xs text-red-500 ml-2 font-normal">已簽到完成</span>' : ''}
-                    </span>
-                `;
-                container.appendChild(label);
-            });
+                        const label = document.createElement('label');
+                        label.className = `flex items-center space-x-3 w-full p-1 rounded-lg transition-all ${isCheckedIn ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:bg-[#f4efe6]'}`;
+                        
+                        label.innerHTML = `
+                            <input type="checkbox" name="memberCheckbox" value="${member.name}" data-title="${member.title}" ${isCheckedIn ? 'disabled' : ''} class="w-4 h-4 text-[#1e3a5f] rounded border-gray-300 focus:ring-[#1e3a5f]">
+                            <span class="text-sm text-gray-800 font-medium">
+                                ${member.name} <span class="text-xs text-gray-500 ml-1">(${member.title})</span>
+                                ${isCheckedIn ? '<span class="text-xs text-red-500 ml-2 font-normal">已簽到完成</span>' : ''}
+                            </span>
+                        `;
+                        container.appendChild(label);
+                    });
+                }
 
-            // 🎯 成員名單完整渲染呈現後，自動將提示紅字隱藏
-            if (notice) {
-                notice.style.display = 'none';
-            }
+                // 3. 名單完整呈現後，立刻將紅字提示隱藏
+                if (notice) {
+                    notice.style.display = 'none';
+                }
+            }, 400); // 400毫秒的同步緩衝時間
         });
 
         // 提交表單
