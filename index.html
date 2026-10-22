@@ -40,7 +40,10 @@
             
             <!-- 選擇單位 -->
             <div>
-                <label for="unitSelect" class="block text-sm font-semibold text-[#1e3a5f] mb-2">選擇您的單位</label>
+                <div class="flex justify-between items-center mb-2">
+                    <label for="unitSelect" class="block text-sm font-semibold text-[#1e3a5f]">選擇您的單位</label>
+                    <span id="loadingNotice" class="text-xs text-red-500 font-medium">⏳ 載入中，可能需稍候 5-10 秒</span>
+                </div>
                 <select id="unitSelect" required class="w-full bg-[#fcfbfa] border border-[#d8d0c1] rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all">
                     <option value="" disabled selected>請選擇單位...</option>
                 </select>
@@ -98,9 +101,17 @@
                         });
                     }
                     initUnits();
+                    // 載入完成後隱藏提示文字
+                    const notice = document.getElementById('loadingNotice');
+                    if (notice) notice.style.display = 'none';
                 })
                 .catch(error => {
                     console.error('載入名單失敗:', error);
+                    const notice = document.getElementById('loadingNotice');
+                    if (notice) {
+                        notice.textContent = '⚠️ 名單載入失敗，請重新整理';
+                        notice.classList.add('text-red-600');
+                    }
                 });
         });
 
