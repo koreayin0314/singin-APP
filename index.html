@@ -77,24 +77,24 @@
 
     <!-- 頁尾 -->
     <footer class="mt-6 text-center text-xs text-gray-400 tracking-wider">
-        環境部環境管理署 ‧ 線上簽到
+        環境部環境管理事務 ‧ 線上簽到系統
     </footer>
 
     <script>
+        // ★ 請確認這裡使用的是您最新的 Google Apps Script 網頁應用程式網址
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw4aOyvVu_pPDHwhRdtc7fpwPcjA16TkOB3KIuwrRecOGibEmUJEwiPesBMm4NthUBDDQ/exec";
 
         let allData = {};
-        let checkedInSet = new Set(); // 儲存已簽到過的人員 (格式: "單位_姓名")
+        let checkedInNamesSet = new Set(); // 儲存已簽到過的姓名
 
         window.addEventListener('DOMContentLoaded', () => {
             fetch(WEB_APP_URL + "?action=getMembers")
                 .then(response => response.json())
                 .then(result => {
                     allData = result.data || {};
-                    // 將已簽到名單放入 Set 中方便比對
                     if (result.checkedIn) {
-                        result.checkedIn.forEach(item => {
-                            checkedInSet.add(`${item.unit}_${item.name}`);
+                        result.checkedIn.forEach(name => {
+                            checkedInNamesSet.add(name);
                         });
                     }
                     initUnits();
@@ -132,8 +132,7 @@
             }
 
             members.forEach((member) => {
-                const key = `${selectedUnit}_${member.name}`;
-                const isCheckedIn = checkedInSet.has(key);
+                const isCheckedIn = checkedInNamesSet.has(member.name);
 
                 const label = document.createElement('label');
                 label.className = `flex items-center space-x-3 w-full p-1 rounded-lg transition-all ${isCheckedIn ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:bg-[#f4efe6]'}`;
