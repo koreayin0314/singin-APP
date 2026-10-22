@@ -72,4 +72,156 @@
                 ✓
             </div>
             <h3 class="text-lg font-bold text-[#1e3a5f] mb-1">簽到成功</h3>
-            <p id="successMessage" class="text-sm text-gray-6
+            <p id="successMessage" class="text-sm text-gray-600 mb-6">您的簽到資料已成功送出！</p>
+            <button onclick="closeModal()" class="w-full bg-[#1e3a5f] text-white py-2.5 rounded-xl text-sm font-medium hover:bg-[#152a45] transition-all cursor-pointer">
+                確定
+            </button>
+        </div>
+    </div>
+
+    <!-- 頁尾 -->
+    <footer class="mt-6 text-center text-xs text-gray-400 tracking-wider">
+        環境部環境管理事務 ‧ 線上簽到系統
+    </footer>
+
+    <script>
+        // ★ 請確認這裡使用的是您最新的 Google Apps Script 網頁應用程式網址
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw4aOyvVu_pPDHwhRdtc7fpwPcjA16TkOB3KIuwrRecOGibEmUJEwiPesBMm4NthUBDDQ/exec";
+
+        let allData = {};
+        let checkedInNamesSet = new Set(); // 儲存已簽到過的姓名
+
+        window.addEventListener('DOMContentLoaded', () => {
+            fetch(WEB_APP_URL + "?action=getMembers")
+                .then(response => response.json())
+                .then(result => {
+                    allData = result.data || {};
+                    if (result.checkedIn) {
+                        result.checkedIn.forEach(name => {
+                            checkedInNamesSet.add(name);
+                        });
+                    }
+                    initUnits();
+                })
+                .catch(error => {
+                    console.error('載入名單失敗:', error);
+                });
+        });
+
+        function initUnits() {
+            const unitSelect = document.getElementById('unitSelect');
+            unitSelect.innerHTML = '<option value="" disabled selected>請選擇單位...</option>';
+            
+            Object.keys(allData).forEach(unit => {
+                const option = document.createElement('option');
+                option.value = unit;
+                option.textContent = unit;
+                unitSelect.appendChild(option);
+            });
+        }
+
+        // 當選擇單位時觸發
+        document.getElementById('unitSelect').addEventListener('change', function() {
+            const notice = document.getElementById('loadingNotice');
+            if (notice) notice.style.display = 'inline'; // 顯示「資料同步中，請稍候」
+
+            const selectedUnit = this.value;
+            const container = document.getElementById('membersContainer');
+            container.innerHTML = '';
+            container.classList.remove('justify-center', 'items-center', 'text-gray-400');
+            container.classList.add('space-y-3', 'items-start');
+
+            const members = allData[selectedUnit] || [];
+
+            if (members.length === 0) {
+                container.innerHTML = '<span class="text-sm text-gray-400">此單位目前無設定人員</span>';
+                if (notice) notice.style.display = 'none'; // 隱藏提示
+                return;
+            }
+
+            members.forEach((member) => {
+                const isCheckedIn = checkedInNamesSet.has(member.name);
+
+                const label = document.createElement('label');
+                label.className = `flex items-center space-x-3 w-full p-1 rounded-lg transition-all ${isCheckedIn ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:bg-[#f4efe6]'}`;
+                
+                label.innerHTML = `
+                    <input type="checkbox" name="memberCheckbox" value="${member.name}" data-title="${member.title}" ${isCheckedIn ? 'disabled' : ''} class="w-4 h-4 text-[#1e3a5f] rounded border-gray-300 focus:ring-[#1e3a5f]">
+                    <span class="text-sm text-gray-800 font-medium">
+                        ${member.name} <span class="text-xs text-gray-500 ml-1">(${member.title})</span>
+                        ${isCheckedIn ? '<span class="text-xs text-red-500 ml-2 font-normal">已簽到完成</span>' : ''}
+                    </span>
+                `;
+                container.appendChild(label);
+            });
+
+            // 🎯 成員名單完整渲染呈現後，自動將提示紅字隱藏
+            if (notice) {
+                notice.style.display = 'none';
+            }
+        });
+
+        // 提交表單
+        document.getElementById('checkinForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const unit = document.getElementById('unitSelect').value;
+            if (!unit) {
+                alert('請先選擇單位');
+                return;
+            }
+
+            const checkboxes = document.querySelectorAll('input[name="memberCheckbox"]:checked');
+            if (checkboxes.length === 0) {
+                alert('請至少勾選一位未簽到的人員');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '傳送中...';
+
+            const now = new Date();
+            const timeString = now.getFullYear() + '/' + 
+                             String(now.getMonth() + 1).padStart(2, '0') + '/' + 
+                             String(now.getDate()).padStart(2, '0') + ' ' + 
+                             String(now.getHours()).padStart(2, '0') + ':' + 
+                             String(now.getMinutes()).padStart(2, '0') + ':' + 
+                             String(now.getSeconds()).padStart(2, '0');
+
+            const promises = Array.from(checkboxes).map(cb => {
+                const payload = {
+                    time: timeString,
+                    unit: unit,
+                    name: cb.value,
+                    title: cb.getAttribute('data-title')
+                };
+                return fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            });
+
+            Promise.all(promises).then(() => {
+                const namesList = Array.from(checkboxes).map(cb => cb.value).join('、');
+                document.getElementById('successMessage').textContent = `已成功為 ${unit} 的 ${namesList} 完成簽到！`;
+                document.getElementById('successModal').classList.remove('hidden');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '完成簽到';
+            }).catch(error => {
+                console.error('簽到失敗:', error);
+                alert('送出失敗，請稍後再試');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '完成簽到';
+            });
+        });
+
+        function closeModal() {
+            document.getElementById('successModal').classList.add('hidden');
+            location.reload();
+        }
+    </script>
+</body>
+</html>
