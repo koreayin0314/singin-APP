@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>116年度會議線上簽到</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
@@ -51,7 +50,7 @@
             <div>
                 <label class="block text-sm font-semibold text-[#1e3a5f] mb-2">出席人員</label>
                 <div id="membersContainer" class="bg-[#fcfbfa] border border-[#d8d0c1] rounded-xl p-4 min-h-[90px] flex flex-col justify-center items-center text-gray-400 text-sm">
-                    請先上方選擇單位
+                    請先選擇上方單位
                 </div>
             </div>
 
@@ -62,9 +61,9 @@
         </form>
     </div>
 
-    <!-- 成功彈跳視窗 (Modal) -->
+    <!-- 成功彈跳視窗 -->
     <div id="successModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 hidden z-50">
-        <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center card-shadow animate-fade-in">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center card-shadow">
             <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
                 ✓
             </div>
@@ -78,34 +77,30 @@
 
     <!-- 頁尾 -->
     <footer class="mt-6 text-center text-xs text-gray-400 tracking-wider">
-        環境部環境管理事務 ‧ 線上簽到系統
+        環境部環境管理署 ‧ 線上簽到
     </footer>
 
     <script>
-        // ★ 請將此處替換為您最新部署的 Google Apps Script 網頁應用程式網址
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw4aOyvVu_pPDHwhRdtc7fpwPcjA16TkOB3KIuwrRecOGibEmUJEwiPesBMm4NthUBDDQ/exec";
 
         let allData = {};
+        let checkedInSet = new Set(); // 儲存已簽到過的人員 (格式: "單位_姓名")
 
-        // 頁面載入時從 Google Sheet 抓取單位與人員名單
         window.addEventListener('DOMContentLoaded', () => {
             fetch(WEB_APP_URL + "?action=getMembers")
                 .then(response => response.json())
                 .then(result => {
                     allData = result.data || {};
+                    // 將已簽到名單放入 Set 中方便比對
+                    if (result.checkedIn) {
+                        result.checkedIn.forEach(item => {
+                            checkedInSet.add(`${item.unit}_${item.name}`);
+                        });
+                    }
                     initUnits();
                 })
                 .catch(error => {
                     console.error('載入名單失敗:', error);
-                    // 若連線失敗改用預設清單
-                    allData = {
-                        "環境部主秘室新聞公關組": [{ name: "曹志弘", title: "組長" }, { name: "梁淑婷", title: "科長" }],
-                        "環管署廢管組": [{ name: "陳又楚", title: "技士" }],
-                        "環管署環衛組": [{ name: "李瑞玲", title: "簡任技正" }, { name: "謝心色", title: "科長" }, { name: "陳聖閔", title: "技士" }],
-                        "環管署執法組": [{ name: "范楓旻", title: "科長" }, { name: "劉易璁", title: "技士" }],
-                        "環管署土基會": [{ name: "楊逸秋", title: "副分組長" }, { name: "張芯瑜", title: "環境技術師" }]
-                    };
-                    initUnits();
                 });
         });
 
@@ -121,7 +116,7 @@
             });
         }
 
-        // 當單位改變時，動態渲染該單位的成員勾選清單 (支援多選 Checkbox)
+        // 當單位改變時，動態渲染人員並檢查是否已簽到
         document.getElementById('unitSelect').addEventListener('change', function() {
             const selectedUnit = this.value;
             const container = document.getElementById('membersContainer');
@@ -136,12 +131,19 @@
                 return;
             }
 
-            members.forEach((member, index) => {
+            members.forEach((member) => {
+                const key = `${selectedUnit}_${member.name}`;
+                const isCheckedIn = checkedInSet.has(key);
+
                 const label = document.createElement('label');
-                label.className = 'flex items-center space-x-3 cursor-pointer w-full p-1 hover:bg-[#f4efe6] rounded-lg transition-all';
+                label.className = `flex items-center space-x-3 w-full p-1 rounded-lg transition-all ${isCheckedIn ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:bg-[#f4efe6]'}`;
+                
                 label.innerHTML = `
-                    <input type="checkbox" name="memberCheckbox" value="${member.name}" data-title="${member.title}" class="w-4 h-4 text-[#1e3a5f] rounded border-gray-300 focus:ring-[#1e3a5f]">
-                    <span class="text-sm text-gray-800 font-medium">${member.name} <span class="text-xs text-gray-500 ml-1">(${member.title})</span></span>
+                    <input type="checkbox" name="memberCheckbox" value="${member.name}" data-title="${member.title}" ${isCheckedIn ? 'disabled' : ''} class="w-4 h-4 text-[#1e3a5f] rounded border-gray-300 focus:ring-[#1e3a5f]">
+                    <span class="text-sm text-gray-800 font-medium">
+                        ${member.name} <span class="text-xs text-gray-500 ml-1">(${member.title})</span>
+                        ${isCheckedIn ? '<span class="text-xs text-red-500 ml-2 font-normal">已簽到完成</span>' : ''}
+                    </span>
                 `;
                 container.appendChild(label);
             });
@@ -159,7 +161,7 @@
 
             const checkboxes = document.querySelectorAll('input[name="memberCheckbox"]:checked');
             if (checkboxes.length === 0) {
-                alert('請至少勾選一位出席人員');
+                alert('請至少勾選一位未簽到的人員');
                 return;
             }
 
@@ -175,7 +177,6 @@
                              String(now.getMinutes()).padStart(2, '0') + ':' + 
                              String(now.getSeconds()).padStart(2, '0');
 
-            // 逐一送出勾選的人員資料到 Google Sheet
             const promises = Array.from(checkboxes).map(cb => {
                 const payload = {
                     time: timeString,
