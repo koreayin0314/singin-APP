@@ -60,7 +60,7 @@
     </div>
 
     <footer class="mt-6 text-center text-xs text-gray-400 tracking-wider">
-        環管署策略規劃科 ‧ 線上簽到系統
+        環管署《主秘室策略規劃科》 ‧ 線上簽到系統
     </footer>
 
     <script>
@@ -68,7 +68,47 @@
         const EVENT_ID = new URLSearchParams(location.search).get('event') || '';
 
         let allData = {};
+        let questions = [];
         let checkedInNamesSet = new Set();
+
+        const inputCls = 'w-full bg-white border border-[#d8d0c1] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3d7a7d]/30 focus:border-[#3d7a7d]';
+
+        function buildQuestion(q, key) {
+            const box = document.createElement('div');
+            const title = document.createElement('div');
+            title.className = 'text-xs font-medium text-[#1e3a5f] mb-1';
+            title.textContent = q.text + (q.required ? ' *' : '');
+            box.appendChild(title);
+            let get;
+            if (q.type === 'text') {
+                const inp = document.createElement('input');
+                inp.type = 'text';
+                inp.className = inputCls;
+                box.appendChild(inp);
+                get = () => inp.value.trim();
+            } else {
+                const inputs = [];
+                const wrap = document.createElement('div');
+                wrap.className = 'flex flex-wrap gap-x-4 gap-y-1';
+                q.options.forEach(opt => {
+                    const l = document.createElement('label');
+                    l.className = 'flex items-center space-x-1.5 text-sm text-gray-700 cursor-pointer';
+                    const i = document.createElement('input');
+                    i.type = q.type === 'multi' ? 'checkbox' : 'radio';
+                    i.name = key;
+                    i.value = opt;
+                    i.className = 'w-4 h-4 accent-[#3d7a7d]';
+                    inputs.push(i);
+                    const t = document.createElement('span');
+                    t.textContent = opt;
+                    l.append(i, t);
+                    wrap.appendChild(l);
+                });
+                box.appendChild(wrap);
+                get = () => inputs.filter(i => i.checked).map(i => i.value).join('、');
+            }
+            return { el: box, get: get, q: q };
+        }
 
         function setBanner(url) {
             const el = document.getElementById('banner');
@@ -107,6 +147,7 @@
                         document.getElementById('pageTitle').textContent += '（已截止）';
                         document.getElementById('submitBtn').disabled = true;
                     }
+                    questions = result.questions || [];
                     allData = result.data || {};
                     (result.checkedIn || []).forEach(n => checkedInNamesSet.add(n));
                     initUnits();
@@ -145,8 +186,11 @@
                 if (members.length === 0) {
                     container.innerHTML = '<span class="text-sm text-gray-400">此單位目前無設定人員</span>';
                 } else {
-                    members.forEach(member => {
+                    members.forEach((member, idx) => {
                         const done = checkedInNamesSet.has(String(member.name).trim());
+                        const wrap = document.createElement('div');
+                        wrap.className = 'w-full';
+
                         const label = document.createElement('label');
                         label.className = `flex items-center space-x-3 w-full p-1 rounded-lg transition-all ${done ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:bg-[#f4efe6]'}`;
 
@@ -157,6 +201,7 @@
                         cb.dataset.title = member.title;
                         cb.disabled = done;
                         cb.className = 'w-4 h-4 text-[#1e3a5f] rounded border-gray-300 focus:ring-[#1e3a5f]';
+                        cb._qs = [];
 
                         const span = document.createElement('span');
                         span.className = 'text-sm text-gray-800 font-medium';
@@ -172,7 +217,20 @@
                             span.appendChild(d);
                         }
                         label.append(cb, span);
-                        container.appendChild(label);
+                        wrap.appendChild(label);
+
+                        if (!done && questions.length) {
+                            const panel = document.createElement('div');
+                            panel.className = 'hidden mt-2 ml-7 p-3 rounded-lg bg-[#f4efe6] space-y-3';
+                            questions.forEach((q, qi) => {
+                                const built = buildQuestion(q, `q_${idx}_${qi}`);
+                                cb._qs.push(built);
+                                panel.appendChild(built.el);
+                            });
+                            cb.addEventListener('change', () => panel.classList.toggle('hidden', !cb.checked));
+                            wrap.appendChild(panel);
+                        }
+                        container.appendChild(wrap);
                     });
                 }
                 noticeElem.style.display = 'none';
@@ -186,6 +244,15 @@
 
             const checkboxes = document.querySelectorAll('input[name="memberCheckbox"]:checked');
             if (checkboxes.length === 0) { alert('請至少勾選一位未簽到的人員'); return; }
+
+            for (const cb of checkboxes) {
+                for (const x of cb._qs) {
+                    if (x.q.required && !x.get()) {
+                        alert(`請填寫 ${cb.value} 的「${x.q.text}」`);
+                        return;
+                    }
+                }
+            }
 
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
@@ -204,7 +271,8 @@
                     time: timeString,
                     unit: unit,
                     name: cb.value,
-                    title: cb.dataset.title
+                    title: cb.dataset.title,
+                    answers: cb._qs.map(x => x.get())
                 })
             }));
 
